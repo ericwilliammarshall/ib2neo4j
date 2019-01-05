@@ -8,12 +8,18 @@ hostFile = 'ibhosts.txt'
 linkFile = 'test.txt'
 switchFile = 'ibswitches.txt'
 
-hosts = {}
+# links' key is the 'near' gid
+# near gid --> connection --> far gid
 links = {}
+hosts = {}
 switches = {}
 
 switchRegexPattern = re.compile ( r'\w+\s+: (\w+) ports (\d+) \"(.*)\" .*') 
 hostRegexPattern = re.compile ( r'\w+\s+: (\w+) ports (\d+) \"(.*)\"' ) 
+linkRegexNearPattern =  re.compile ( r'(\w+)\s+\"\s+(.*)\"\s+(\d+)\s+(\d+)') 
+linkRegexConnectionPattern =  re.compile ( r'\( (\w\w)\s+(\d+.\d+ \w+) (\w+)/\s+(\w+)\)') 
+linkRegexFarPattern =  re.compile ( r'>\s+(\w+)\s+(\d+)\s+(\d+).*\"(.*)\.*"') 
+
 
 with open(switchFile) as switchFileHandle:
     for line in switchFileHandle:
@@ -44,7 +50,6 @@ with open(hostFile) as hostFileHandle:
         hosts[gid] = [name, ports,] 
         #print(gid, name, ports)
 
-counter = 0
 with open(linkFile) as linkFileHandle:
     for line in linkFileHandle:
         # example input:
@@ -67,12 +72,30 @@ with open(linkFile) as linkFileHandle:
         linkRegexFar =  re.match ( r'>\s+(\w+)\s+(\d+)\s+(\d+).*\"(.*)\.*"', far) 
 
         #lineRegex = lineRegexPattern.match ( line ) 
-        gid  =  linkRegexNear.group(1) 
-        card = linkRegexNear.group(2) 
-        lid_number =  linkRegexNear.group(3) 
-        port_number =  linkRegexNear.group(4) 
+        #gid  =  linkRegexNear.group(1) 
+        #card = linkRegexNear.group(2) 
+        #lid_number =  linkRegexNear.group(3) 
+        #port_number =  linkRegexNear.group(4) 
 
-        ib_type =  linkRegexConnection.group(1) 
+        #ib_type =  linkRegexConnection.group(1) 
+        #link_rate =  linkRegexConnection.group(2) 
+        #link_active =  linkRegexConnection.group(3) 
+        #link_up =  linkRegexConnection.group(4) 
+
+        #far_gid =  linkRegexFar.group(1) 
+        #far_lid_number =  linkRegexFar.group(2) 
+        #far_port_number =  linkRegexFar.group(3) 
+        #far_name = linkRegexFar.group(4) 
+
+
+        
+
+        near_gid  =  linkRegexNear.group(1) 
+        near_card_type = linkRegexNear.group(2) 
+        near_lid_number =  linkRegexNear.group(3) 
+        near_port_number =  linkRegexNear.group(4) 
+
+        link_ib_type =  linkRegexConnection.group(1) 
         link_rate =  linkRegexConnection.group(2) 
         link_active =  linkRegexConnection.group(3) 
         link_up =  linkRegexConnection.group(4) 
@@ -82,10 +105,24 @@ with open(linkFile) as linkFileHandle:
         far_port_number =  linkRegexFar.group(3) 
         far_name = linkRegexFar.group(4) 
 
-        #link[counter] = [name, ports, gid, card, lid_number, port_number, ib_card, link_rate, link_state, other_gid, other_lid_number, other_port_number, other_name, ]
+        links[near_gid] = {
+                'near_port_number': near_port_number, 
+                'near_card_type': near_card_type, 
+                'near_lid_number': near_lid_number, 
+                'near_port_number': near_port_number,
+                'link_ib_type': link_ib_type,
+                'link_rate' : link_rate,
+                'link_active':link_active,
+                'link_up': link_up,
+                'far_gid': far_gid,
+                'far_lid_number': far_lid_number,
+                'far_port_number': far_port_number,
+                'far_name': far_name,
+                }
+
 
         
-        print(ib_type, link_rate, link_active, link_up, far_gid, far_lid_number, far_port_number, far_name)
-        counter =+ 1
+        #print(link_ib_type, link_rate, link_active, link_up, far_gid, far_lid_number, far_port_number, far_name)
+
 
 
