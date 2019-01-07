@@ -3,12 +3,25 @@
 import os
 import re
 
+# files to read
 hostTxtFile = 'ibhosts.txt'	
-linkTxtFile = 'iblinkinfo.txt'
-#linkTxtFile = 'test.txt'
+linksTxtFile = 'iblinkinfo.txt'
 switchTxtFile = 'ibswitches.txt'
+
+# tests
+#hostTxtFile = 'Thosts.txt'	
+#linksTxtFile = 'Tlinks.txt'
+#switchTxtFile = 'Tsw.txt'
+
+
+
 # links' key is the 'near' gid
 # near gid --> connection --> far gid
+# files to write
+hostCsvFile = 'ibhosts_neo4j.csv'	
+linksCsvFile = 'iblink_neo4j.csv'
+switchCsvFile = 'ibswitches_neo4j.csv'
+
 LINKS = {}
 HOSTS = {}
 SWITCHES = {}
@@ -75,19 +88,10 @@ def process_links_file( linkFile ):
         for line in linkFileHandle:
             # example input:
             # 0x248a07030017b128 "                  thing4 HCA-1"    612    1[  ] ==( 4X      25.78125 Gbps Active/  LinkUp)==>  0xec0d9a030002b810    496   20[  ] "SwitchIB Mellanox Technologies" ( )
-            # 0xec0d9a03006ed0ca "                quorum01 HCA-2"    558    1[  ] ==( 4X      25.78125 Gbps Active/  LinkUp)==>  0xec0d9a030002b810    496   15[  ] "SwitchIB Mellanox Technologies" ( )
-            # 0x248a07030017b12c "                  thing3 HCA-1"    532    1[  ] ==( 4X      25.78125 Gbps Active/  LinkUp)==>  0xec0d9a030002b810    496   19[  ] "SwitchIB Mellanox Technologies" ( )
             # 0xec0d9a030002b810 "SwitchIB Mellanox Technologies"    496    9[  ] ==(                Down/ Polling)==>             [  ] "" ( )
     
-
             # break the line into three parts to make the regex simpler
             near, connection, far = line.split('==')
-    
-    
-            #linkRegex =  re.match ( r'(\w+)\s+\"\s+(.*)\"\s+(\d+)\s+(\d+)\[  \] ==\( (\w\w)\s+(\d+.\d+ \w+) (w+\w+).*', near) 
-            #linkRegexNear =  re.match ( r'(\w+)\s+\"\s+(.*)\"\s+(\d+)\s+(\d+)', near) 
-            #linkRegexConnection =  re.match ( r'\( (\w\w)\s+(\d+.\d+ \w+) (\w+)/\s+(\w+)\)', connection) 
-            #linkRegexFar =  re.match ( r'>\s+(\w+)\s+(\d+)\s+(\d+).*\"(.*)\.*"', far) 
     
             linkRegexNear =  linkRegexNearPattern.match(near) 
     
@@ -128,6 +132,7 @@ def process_links_file( linkFile ):
                 far_lid_number =  linkRegexFar.group(2) 
                 far_port_number =  linkRegexFar.group(3) 
                 far_name =  linkRegexFar.group(4) 
+                #print(link_ib_type, link_rate, link_active, link_up, far_gid, far_lid_number, far_port_number, far_name)
     
             LINKS[near_gid] = {
                'near_port_number': near_port_number, 
@@ -143,9 +148,6 @@ def process_links_file( linkFile ):
                'far_port_number': far_port_number,
                'far_name': far_name,
                }
-            
-    
-            
             #print(link_ib_type, link_rate, link_active, link_up, far_gid, far_lid_number, far_port_number, far_name)
 
 ##################################
@@ -153,23 +155,29 @@ def process_links_file( linkFile ):
 # collect all the input data
 process_switch_file( switchTxtFile )
 process_host_file( hostTxtFile )
-process_links_file( linkTxtFile )
+process_links_file( linksTxtFile )
 
-# 
 # create (munin) -[: pings ]-> (alpha)
 
 
 # create host nodes 
 # 
+#with open(hostCsvFile, mode='w') as hostsFile:
+#    hostsFile.write('uid,type, name, ports\n' )
 for uid, value in HOSTS.items(): 
     # print neo4j comands to create nodes
     # CREATE (n:Person { name: 'Andy', title: 'Developer' })
     current_uid = uid
     current_name = value['name']
     current_ports = value['ports']
-    print(f'CREATE (`{uid}`:HOST {{ uid: \'{current_uid}\', type: \'host\', name: \'{current_name}\', ports: \'{current_ports}\' }} ) ' )
+#    hostsFile.write(f'{current_uid}, {current_name}, {current_ports}\n' )
+    print(f'CREATE (`{uid}`:HOST {{ uid: \'{current_uid}\', type: \'host\', name: \'{current_name}\', ports: \'{current_ports}\' }} ) ;' )
+#hostsFile.close()
+#print(f'LOAD CSV WITH HEADERS FROM \'file:///{hostCsvFile}\' AS line CREATE (:Host {{ uid: line.uid, type: line.type, name: line.name, ports: line.ports }} ); ' )
 
 # create switches nodes 
+#with open(switchCsvFile, mode='w') as switchFile:
+#    switchFile.write(f'uid, type, name, ports, data_rate, port, lid, lmc\n' )
 for uid, value in SWITCHES.items(): 
     # print neo4j comands to create nodes
     current_uid = uid
@@ -179,9 +187,16 @@ for uid, value in SWITCHES.items():
     current_port = value['port']
     current_lid = value['lid']
     current_lmc = value['lmc']
-    print(f'CREATE (`{uid}`:SWITCH {{ uid: \'{current_uid}\', type: \'switch\', name: \'{current_name}\', ports: \'{current_ports}\', data_rate: \'{current_data_rate}\', port: \'{current_port}\', lid: \'{current_lid}\', lmc: \'{current_lmc}\'  }} ) ,' )
+#        switchFile.write(f'{current_uid}, switch, {current_name}, {current_ports}, {current_data_rate}, {current_port}, {current_lid}, {current_lmc}\n' )
+    print(f'CREATE (`{uid}`:SWITCH {{ uid: \'{current_uid}\', type: \'switch\', name: \'{current_name}\', ports: \'{current_ports}\', data_rate: \'{current_data_rate}\', port: \'{current_port}\', lid: \'{current_lid}\', lmc: \'{current_lmc}\'  }} ) ;' )
+
+#    switchFile.close()
+#    print(f'LOAD CSV WITH HEADERS FROM \'file:///{switchCsvFile}\' AS line CREATE (:Switch {{ uid: line.uid, type: line.type, name: line.name, ports: line.ports, data_rate: line.data_rate, port: line.port, lid: line.lid, lmc: line.lmc  }} ) ;' )
+
 
 # create links 
+#with open(linksCsvFile, mode='w') as linksFile:
+#    linksFile.write(f'MATCH (a),(b) WHERE a.uid = \'{current_uid}\' AND b.uid = \'{current_far_gid}\' CREATE (a)-[c:CONNECTION{{link_rate:\'{current_link_rate}\', link_ib_type: \'{current_link_ib_type}\', link_active: \'{current_link_active}\', link_up: \'{current_link_up}\' }}]->(b)') 
 for uid, value in LINKS.items(): 
     #{'near_port_number': '1', 'near_card_type': 'thing4 HCA-1', 'near_lid_number': '612', 'link_ib_type': '4X', 'link_rate': '25.78125 Gbps', 'link_active': 'Active', 'link_up': 'LinkUp', 'far_gid': '0xec0d9a030002b810', 'far_lid_number': '496', 'far_port_number': '20', 'far_name': 'SwitchIB Mellanox Technologies'}    
     current_uid = uid
@@ -197,4 +212,5 @@ for uid, value in LINKS.items():
     current_far_port_number = value['far_port_number']
     current_far_name = value['far_name']
 
-    print(f'MATCH (a),(b) WHERE a.uid = \'{current_uid}\' AND b.uid = \'{current_far_gid}\' CREATE (a)-[c:CONNECTION{{link_rate:\'{current_link_rate}\', link_ib_type: \'{current_link_ib_type}\', link_active: \'{current_link_active}\', link_up: \'{current_link_up}\' }}]->(b)') 
+    print(f'MATCH (a),(b) WHERE a.uid = \'{current_uid}\' AND b.uid = \'{current_far_gid}\' CREATE (a)-[c:{current_link_up} {{link_rate:\'{current_link_rate}\', link_ib_type: \'{current_link_ib_type}\', link_active: \'{current_link_active}\', link_up: \'{current_link_up}\' }}]->(b); ') 
+#    linksFile.close()
